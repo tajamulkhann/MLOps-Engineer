@@ -1,4 +1,4 @@
-## Most Important Git Commands (Interview)
+# Most Important Git Commands (Interview)
 
 | **Step**               | **Command**                        | **Purpose / Explanation**                      |
 | ---------------------- | ---------------------------------- | ---------------------------------------------- |
@@ -26,14 +26,14 @@
 | —                      | `git diff`                         | Show file differences.                         |
 | —                      | `git diff main..dev`               | Show differences between main and dev          |
 
-### How to delete Branches ?
+## How to delete Branches ?
 | Task                        | Command                        |
 | --------------------------- | ------------------------------ |
 | Delete local branch (safe)  | `git branch -d dev`            |
 | Delete local branch (force) | `git branch -D dev`            |
 | Delete remote branch        | `git push origin --delete dev` |
 
-### Git Status Codes
+## Git Status Codes
 | **VS Code Symbol/Color** | **Terminal Symbol** | **Meaning (Simple Explanation)**                        |
 | ------------------------ | ------------------- | ------------------------------------------------------- |
 | **U (Green)**            | `??`                | Untracked file — Git sees it but isn’t tracking it yet. |
