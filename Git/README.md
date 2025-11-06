@@ -25,3 +25,20 @@
 | —                      | `git log`                          | Show commit history.                           |
 | —                      | `git diff`                         | Show file differences.                         |
 | —                      | `git diff main..dev`               | Show differences between main and dev          |
+
+### How to delete Branches ?
+| Task                        | Command                        |
+| --------------------------- | ------------------------------ |
+| Delete local branch (safe)  | `git branch -d dev`            |
+| Delete local branch (force) | `git branch -D dev`            |
+| Delete remote branch        | `git push origin --delete dev` |
+
+### Git Status Codes
+| **VS Code Symbol/Color** | **Terminal Symbol** | **Meaning (Simple Explanation)**                        |
+| ------------------------ | ------------------- | ------------------------------------------------------- |
+| **U (Green)**            | `??`                | Untracked file — Git sees it but isn’t tracking it yet. |
+| **A (Green)**            | `A`                 | Added/Staged — file is ready to be committed.           |
+| **M (Yellow/Blue)**      | `M` (red)           | Modified but unstaged — file changed but not added.     |
+| **M (Green)**            | `M` (green)         | Modified and staged — file changed and added to commit. |
+| **D (Red)**              | `D`                 | Deleted — file was removed from working directory.      |
+| **R (Green/Yellow)**     | `R`                 | Renamed — file was moved or renamed.                    |
