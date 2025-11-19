@@ -1,3 +1,5 @@
+# MLOps Complete Project — Interview Cheat Sheet
+
 ### Step-0: Project Setup & Repo Hygiene
 
 * Defined project root with directories like `data/`, `src/`, `deployment/`, `models/`, `logs/`.
@@ -87,3 +89,4 @@
 ### Elevator Pitch
 
 > “This project implements a full MLOps lifecycle: raw data ingestion → data cleaning & feature engineering → data validation → model training & experiment tracking → model evaluation & registry → Dockerised model deployment → production monitoring and retraining loop. Reproducibility is enforced via `requirements.txt`, `constants.py`, Git versioning, and artifact versioning. CI/CD automation builds and deploys containers, with monitoring and rollback capabilities for live performance maintenance.”
+
