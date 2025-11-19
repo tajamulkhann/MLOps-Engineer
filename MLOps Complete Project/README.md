@@ -1,150 +1,89 @@
-# MLOps Complete Project — Interview Cheat Sheet
+### Step-0: Project Setup & Repo Hygiene
 
-**Quick summary**
-A production-ready ML pipeline that covers data ingestion → transformation → validation → training → model packaging → deployment. Built to demonstrate MLOps best practices: reproducibility, versioning, CI/CD, containerization, and cloud deployment (S3, ECR, EC2).
-
----
-
-## High-level stages (what to say in an interview)
-
-1. **Data Ingestion**
-
-   * Source data collection (files, APIs, streaming).
-   * In this project: synthetic / network data stored under `Network_Data/` (or S3 in production).
-   * Discuss batching vs streaming, and initial sanity checks.
-
-2. **Data Transformation**
-
-   * Feature engineering, cleaning, normalizing, encoding.
-   * Implemented as modular scripts/functions so steps are re-runnable.
-   * Use a pipeline framework or plain Python modules in `data_schema/` or `templates/`.
-
-3. **Data Validation**
-
-   * Schema checks, null rate thresholds, distribution/summary statistics.
-   * Use simple assertion checks or libraries (e.g., Great Expectations) for schema enforcement.
-   * Save validation reports/logs to `logs/` and raise alerts or block training if failed.
-
-4. **Model Trainer**
-
-   * Train using reproducible code, seed control, and configurable hyperparameters.
-   * Save best model artifact as a `.pkl` (or Torch/TF format) in `final_model/` or upload to S3.
-   * Log metrics (accuracy, precision/recall, AUC) and hyperparameters to experiment tracker (MLflow / Weights & Biases).
-
-5. **Model Evaluation & Model Registry**
-
-   * Compare new model against a baseline/production model.
-   * Use thresholds for promotion; register the model in a registry (MLflow, S3 + manifest, or a database).
-   * Promote via CI/CD pipeline when it passes tests.
-
-6. **Model Pusher / Deployment**
-
-   * Package the model into a container.
-   * Push image to ECR.
-   * Deploy to EC2 (or ECS/EKS) instance(s) and expose via REST API (Flask/FastAPI in `app.py`).
-   * Add health checks, logging, and metrics endpoints.
+* Defined project root with directories like `data/`, `src/`, `deployment/`, `models/`, `logs/`.
+* Created `.gitignore` to exclude irrelevant files/folders (e.g., `__pycache__`, `*.pyc`, large raw data files, `models/old_versions/`).
+* Created `requirements.txt` (or `environment.yml`) listing all dependencies so the environment is reproducible.
+* Used a `constants.py` or `config.yaml` for all configurable paths, parameters, URIs, hyperparameters.
+* Every meaningful change committed in Git with meaningful messages & tags for releases.
 
 ---
 
-## Infra components & where they fit
+### Step-1: Data Ingestion
 
-* **S3 buckets**
-
-  * Store raw data, processed data, model artifacts (`.pkl`), and validation reports.
-  * Version artifacts (time-stamped folders) and maintain lifecycle policies.
-* **ECR (Elastic Container Registry)**
-
-  * Store Docker images (infrastructure for model serving containers).
-  * Typical image name: `<aws_account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>`
-* **EC2 instance**
-
-  * Host for container runtime (docker-compose or run container directly) or as a simple serving VM.
-  * Use an autoscaling group / load balancer in real production.
+* Collected raw data (in your case the folder `Network_Data/` in the repo) or pointed to S3 in production.
+* Performed initial sanity checks: missing values, data types, simple distributions.
+* Stored raw data as an artifact (immutable) for traceability.
 
 ---
 
-## Packaging & artifacts (.pkl etc.)
+### Step-2: Data Transformation & Feature Engineering
 
-* Save the trained model as `model.pkl` using `joblib.dump()` or `pickle.dump()`:
-
-```py
-from joblib import dump
-dump(model, "final_model/model.pkl")
-```
-
-* Also save preprocessor/scaler objects (`scaler.pkl`, `encoder.pkl`) so production inference pipeline mirrors training.
-* Store a `metadata.json` with `model_version`, `training_date`, `metrics`, and `artifact_s3_path`.
+* Cleaned raw data: handled missing/outlier values, encoding, scaling, normalization.
+* Designed a feature-engineering script or module (in `src/` or `data_schema/`/`templates/`).
+* Saved processed data or feature sets as artifacts (e.g., `features/v1.parquet`) and logged version (via constants/config).
+* Logged the feature version and transformation metadata to tracking system so you know exactly what features fed the model.
 
 ---
 
-## Docker + ECR + EC2 — step-by-step (short)
+### Step-3: Data Validation
 
-1. **Dockerize app**
-
-   * `Dockerfile` (project root) builds a container with the model and a small API (`app.py`).
-2. **Build & test locally**
-
-   * `docker build -t networkssecurity:latest .`
-   * `docker run -p 8000:8000 networkssecurity`
-3. **Push to ECR**
-
-   * `aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <ECR_URI>`
-   * `docker tag networkssecurity:latest <ECR_URI>:latest`
-   * `docker push <ECR_URI>:latest`
-4. **Deploy on EC2**
-
-   * SSH to EC2, `docker pull <ECR_URI>:latest`, `docker run -d -p 80:8000 <ECR_URI>:latest`
-   * For production use ECS/EKS with task definitions or Helm charts.
+* Built validation checks: schema (expected columns/types), null/NaN thresholds, distribution/summary statistics.
+* Implemented either simple assertions or used a library like Great Expectations for schema enforcement.
+* Stored validation reports/logs (in `logs/validation/` or similar). If checks failed, blocked downstream training.
+* Logged the validation “artifact” (report) so you have an audit trail of data quality.
 
 ---
 
-## CI/CD & automation (what to mention)
+### Step-4: Model Training & Experiment Tracking
 
-* **CI**: Run unit tests, linting, model training smoke-tests, and model evaluation on PRs (GitHub Actions).
-* **CD**: On `main` merge and passing checks, build image → push to ECR → deploy (using GitHub Actions + AWS CLI or Terraform/Ansible).
-* **Model promotion**: If model meets production gating criteria, the pipeline triggers deployment.
-
----
-
-## Observability & maintenance (interviewer follow-ups)
-
-* **Logging**: Structured logs (stdout/stderr), centralized (CloudWatch / ELK).
-* **Metrics**: Request latency, error rates, model performance (drift detectors, label collection).
-* **Alerts**: Set SLOs and alert on degraded performance or data drift.
-* **Rollbacks**: Use image tags with versions, rollback by redeploying previous image.
-* **Secrets**: Store secrets in AWS Secrets Manager or Parameter Store — never in repo.
-* **Infra-as-Code**: Terraform/CloudFormation for reproducible infra.
+* Wrote training script (e.g., `train_model.py`) that: loads feature artifact, splits data, sets seed, trains model with configurable hyperparameters.
+* Used experiment tracking (e.g., MLflow) to log: parameters, metrics, dataset/feature versions, code version (Git SHA) and model artifact.
+* Saved trained model into `models/` (e.g., `model_v1.pkl`) with metadata JSON (`metadata.json`) including model version, training date, metrics, artifact path.
+* Ensured reproducible environment via `requirements.txt` + `constants.py` + maybe `Dockerfile`.
 
 ---
 
-## Common interview follow-ups — short answers you can give
+### Step-5: Model Evaluation & Model Registry
 
-* **How do you version models?** → Use semantic model versions + registry (MLflow or S3 naming). Keep metadata and metrics together.
-* **How to handle drifting data?** → Monitor prediction distributions, label feedback loop, retrain when thresholds crossed.
-* **What if inference code is different from training?** → Save preprocessing pipeline objects (.pkl) and apply same steps in inference; write integration tests validating outputs on sample inputs.
-* **How to test a model before deployment?** → Unit tests, integration tests, canary deployments, A/B tests, shadow mode.
-* **Security concerns?** → Use IAM roles, least privilege, private subnets, HTTPS, and secret management.
-
----
-
-## Short elevator pitch for interviews
-
-“This project implements a full MLOps lifecycle: data ingestion, transformation, validation, model training, artifact storage (.pkl in S3), containerization, and deployment to AWS using ECR + EC2. I added CI/CD to automate testing and deployments, monitoring for data drift and model performance, and rollback strategies to ensure safe releases.”
+* Evaluated the trained model on hold-out/test set: metrics like accuracy, precision/recall, AUC, confusion matrix etc.
+* Logged evaluation artifacts (plots/images) to the experiment tracker.
+* Compared new model against baseline (production model) using metrics.
+* Registered the winning model in a model registry (via MLflow or nevertheless) with versioning (v1 → v2) and staging tags (Staging → Production).
+* Documented decision criteria for promotion of the model.
 
 ---
 
-## Helpful files to point to in repo
+### Step-6: Model Pusher / Deployment
 
-* `Dockerfile` — containerization steps
-* `app.py` — model serving API
-* `main.py` / `push_data.py` — pipeline entrypoints
-* `final_model/` — saved `.pkl` artifacts
-* `README.md` — (replace/add this) overview and instructions
+* Packaged the selected model into a serving artefact: created `Dockerfile` (in `deployment/` folder), or built container image.
+* Wrote entry point API (e.g., `app.py`, `predictor.py`) that loads model (`joblib.load()` or `mlflow.pyfunc.load_model()`) and exposes REST endpoint (`/predict`).
+* Pushed container image to container registry (e.g., AWS ECR) with tag (matching model version).
+* Deployed to production environment (EC2/ECS/EKS) and exposed as REST API behind load balancer.
+* Added health-checks, logging of requests, metrics endpoint.
 
 ---
 
-## Final tip
+### Step-7: Monitoring, Maintenance & Feedback Loop
 
-Practice walking through the pipeline by narrating a single example request: how data flows from S3 → preprocessing → training → model saved as `.pkl` → dockerized → pushed to ECR → deployed on EC2, and how you’d detect and respond to a performance regression.
+* Instrumented production pipeline: log each request (timestamp, model version, input features, prediction) to centralized log store.
+* Monitored key metrics: latency, error rate, prediction distribution, input feature distribution, drift (data drift, concept drift).
+* Built dashboards/alerts (Grafana/Prometheus or cloud native) to raise alert when drift or performance degradation occurs.
+* When threshold crossed, triggered retraining pipeline (continuous training) feeding back into Step-4.
+* Maintained versioning of deployed model, capability to rollback to previous version if issues arise.
 
-Good luck — if you want, I can tailor this README for the exact filenames in your repo (e.g., include precise commands from your `Dockerfile` and `app.py`) and produce a copy-ready `README.md`.
+---
+
+### Step-8: CI/CD, Governance & Reproducibility
+
+* Set up CI pipelines (GitHub Actions/Jenkins) for: linting, unit tests, data pipeline tests, model training smoke tests on pull requests.
+* Set up CD pipelines for: building container, pushing to registry, deploying to staging, then to production after approvals.
+* Incorporated continuous training (CT) schedule or trigger from monitoring events.
+* Ensured governance: audited experiment runs (which data, code version, features, model version), stored metadata. Access controls for model registry and artifact stores.
+* Documented project in `README.md`: architecture diagram, environment setup, usage instructions, folder structure.
+* Used `constants.py`/`config.yaml` to centralise configuration; `requirements.txt` to lock dependencies; `.gitignore` for clean repository.
+
+---
+
+### Elevator Pitch
+
+> “This project implements a full MLOps lifecycle: raw data ingestion → data cleaning & feature engineering → data validation → model training & experiment tracking → model evaluation & registry → Dockerised model deployment → production monitoring and retraining loop. Reproducibility is enforced via `requirements.txt`, `constants.py`, Git versioning, and artifact versioning. CI/CD automation builds and deploys containers, with monitoring and rollback capabilities for live performance maintenance.”
